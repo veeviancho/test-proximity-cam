@@ -1,0 +1,4 @@
+{
+    "python.pythonPath": "project_env/bin/python",
+    "python.formatting.provider": "black"
+}
