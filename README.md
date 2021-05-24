@@ -1,5 +1,8 @@
 $ pip3 install requirements.txt
 
+To run
+$ python3 main.py
+
 Additionally, if needed: Installing pyrealsense2 on Mac
 Source: https://github.com/IntelRealSense/librealsense/issues/5275
 
