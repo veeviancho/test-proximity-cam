@@ -102,6 +102,7 @@ while True:
     # cv.findContours(image, mode, method[, contours[, hierarchy[, offset]]])
     # Lookup "Contours Features"
     fg_mask_box = fg_mask
+    print(fg_mask_box)
     contours, hierarchy = cv2.findContours(fg_mask_box, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:] #can try CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS
     areas = [cv2.contourArea(c) for c in contours]
 
@@ -161,7 +162,7 @@ while True:
 
     # Displaying videos
     cv2.imshow("Video", frame)
-    #cv2.imshow("BG Sub", fg_mask)
+    cv2.imshow("BG Sub", fg_mask)
 
     # waitKey(0) will display the window infinitely until any keypress (it is suitable for image display).
     # waitKey(1) will display a frame for 1 ms, after which display will be automatically closed
