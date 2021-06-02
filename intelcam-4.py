@@ -46,14 +46,15 @@ points = 20
 count = 0
 record = []
 count_frame = 0
-endpoint = 0.5
-startpoint = 0.7
+endpoint = 0.4
+startpoint = 0.5
 current = 0
 text = "Room is: Unoccupied"
 p = []
 black = 0 #153
 temp = 0
 x, y = 0, 0
+number = str("")
 
 backSub = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=16, detectShadows=True)
 
@@ -193,39 +194,46 @@ try:
         #         count += 1
 
         else:
-            mean = dist_record / count
+            mean = round (dist_record / count, 2)
             count = 0
             dist_record = 0
-            print("dist: ", mean)
-            #record.append(mean)
-            #print(record)
+            # print("dist: ", mean)
+            if mean > 0:
+                #record.append(mean)
+                #print(record)
+                number = str(mean)
 
-            #cv2.putText(frame, str(mean), (150, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        # if less than 20cm away
+        # if record[len(record)-1] < 0.1:
+
 
             prev = current 
             current = mean
             if current > prev:
-                record.append(mean)
+                record.append("up")
             elif current < prev:
-                record.append(mean)
+                record.append("down")
+            print(mean)
             print(record)
             
-            if (len(record) > 4):
-                for i in range (5):
-                    p.append(record[len(record)-(i+1)]) #last to 5th last
-                # if now is near the door, and most of the previous few points are decreasing (coming nearer)
-                if (current < endpoint):
-                    if (p.count("nearer") > 3):
+            if (len(record) > 3):
+                for i in range (3):
+                    p.append(record[len(record)-(i+1)])
+
+                if (current < endpoint): #endpoint = 0.4
+                    if (p.count("down") > 3):
                         #print("in")
                         text = "Room is: Occupied"
                         record.clear()
                         record.append("occu")
-                if (current > startpoint):
-                    if record[0] == "occu" and (p.count("further") > 3):
+
+                if (current > startpoint): #startpoint = 0.5
+                    if record[0] == "occu" and (p.count("up") > 3):
                         #print ("out")
                         text = "Room is: Unoccupied"
                         record.clear()
-
+        
+        cv2.putText(frame, number, (150, 300), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv2.circle(frame,(x,y),4,(0,0,255),-1)
         cv2.imshow('Video', frame)
 

@@ -131,7 +131,7 @@ while True:
     # Draw circle in the center of the bounding box
     x2 = x + int(w/2)
     y2 = y + int(h/2)
-    #cv2.circle(frame,(x2,y2),4,(0,255,0),-1)
+    cv2.circle(frame,(x2,y2),4,(0,255,0),-1)
  
     # Print the centroid coordinates (we'll use the center of the bounding box) on the image
     #text = "x: " + str(x2) + ", y: " + str(y2)

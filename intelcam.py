@@ -30,7 +30,7 @@ depth_scale = depth_sensor.get_depth_scale()
 print("Depth Scale is: " , depth_scale)
 
 # We will be removing the background of objects more than clipping_distance_in_meters meters away
-max_dist = 1 #1 meter
+max_dist = 0.8 #1 meter
 #max_dist = clipping_distance_in_meters / depth_scale
 #print(max_dist)
 
@@ -52,9 +52,22 @@ current = 0
 text = "Room is: Unoccupied"
 p = [] 
 
+# Countdown for 30 frames (initial stabilisation) 
+stabilize_countdown = 30
+
+# Countdown for inactivity, no activity for 30 minutes
+# Approximately 20 frames per second
+inactivity_max = 30 * 60 * 20
+inactivity_count = 0
+
 # Streaming loop
 try:
     while True:
+
+        if stabilize_countdown > 0:
+ 	        stabilize_countdown = stabilize_countdown - 1
+ 	        continue
+
         # Get frameset of color and depth
         frames = pipeline.wait_for_frames()
         
@@ -94,22 +107,22 @@ try:
             prev = current 
             current = mean
             if current > prev:
-                record.append("further")
+                record.append("out")
             elif current < prev:
-                record.append("nearer")
+                record.append("in")
             
-            if (len(record) > 4):
-                for i in range (5):
+            if (len(record) > 10):
+                for i in range (11):
                     p.append(record[len(record)-(i+1)]) #last to 5th last
-                # if now is near the door, and most of the previous few points are decreasing (coming nearer)
+                # if now is near the door, and most of the previous few points are decreasing (coming in)
                 if (current < endpoint):
-                    if (p.count("nearer") > 3):
+                    if (p.count("in") > 8):
                         #print("in")
                         text = "Room is: Occupied"
                         record.clear()
                         record.append("occu")
                 if (current > startpoint):
-                    if record[0] == "occu" and (p.count("further") > 3):
+                    if record[0] == "occu" and (p.count("out") > 3):
                         #print ("out")
                         text = "Room is: Unoccupied"
                         record.clear()
@@ -120,12 +133,16 @@ try:
         cv2.circle(color_image,(x,y),4,(0,0,255),-1)
         cv2.putText(color_image, text, (150, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
         cv2.imshow("Camera", color_image)
+        print(record)
 
         key = cv2.waitKey(1)
         # Press esc or 'q' to close the image window
         if key & 0xFF == ord('q') or key == 27:
             cv2.destroyAllWindows()
             break
+        if key & 0xFF == ord('r'):
+            text = "Room is: Unoccupied"
+            record.clear()
         
 finally:
     pipeline.stop()
