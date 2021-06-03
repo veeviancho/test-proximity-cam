@@ -36,7 +36,7 @@ align_to = rs.stream.color
 align = rs.align(align_to)
 
 # Declaring some temp variables
-max_dist = 2
+max_dist = 1.5
 dist_record = 0
 points = 20
 count = 0
@@ -151,7 +151,7 @@ try:
         dist = depth_frame.get_distance(x,y)
         #print(dist)
 
-        # if more than 2m away, ignore
+        # if more than 1.5m away, ignore
         if dist > max_dist:
             cv2.imshow('Video',frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
