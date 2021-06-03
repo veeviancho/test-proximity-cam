@@ -29,11 +29,6 @@ depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
 print("Depth Scale is: " , depth_scale)
 
-# We will be removing the background of objects more than clipping_distance_in_meters meters away
-max_dist = 1 #1 meter
-clipping_distance = max_dist / depth_scale
-#print("Max:", max_dist, "Clipping:", clipping_distance)
-
 # Create an align object
 # rs.align allows us to perform alignment of depth frames to others frames
 # The "align_to" is the stream type to which we plan to align depth frames.
@@ -41,20 +36,23 @@ align_to = rs.stream.color
 align = rs.align(align_to)
 
 # Declaring some temp variables
+max_dist = 2
 dist_record = 0
 points = 20
 count = 0
 record = []
 count_frame = 0
-endpoint = 0.4
-startpoint = 0.5
 current = 0
 text = "Room is: Unoccupied"
 p = []
-black = 0 #153
+black = 0 #153 for grey
 temp = 0
 x, y = 0, 0
 number = str("")
+
+# These values would be configured depending on location/angle of camera
+endpoint = 0.4
+startpoint = 0.5
 
 backSub = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=16, detectShadows=True)
 
@@ -66,14 +64,15 @@ stabilize_countdown = 30
 inactivity_max = 30 * 60 * 20
 inactivity_count = 0
 
+
 # Streaming loop
 try:
     while True:
 
         if stabilize_countdown > 0:
- 	        stabilize_countdown = stabilize_countdown - 1
- 	        continue
-             
+            stabilize_countdown = stabilize_countdown - 1
+            continue
+            
         change = False
 
         # Get frameset of color and depth and aligning depth frame to color frame
@@ -84,28 +83,20 @@ try:
         color_frame = frames.get_color_frame()
         depth_frame = frames.get_depth_frame()
 
-#####################################################################
-
         #depth_image = np.asanyarray(depth_frame.get_data())
         color_image = np.asanyarray(color_frame.get_data())
         frame = color_image
 
-        #cv2.imshow("1. Original", color_image)
+        #cv2.imshow("Original", color_image)
 
         cv2.putText(frame, text, (150, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
-        # # Removing background if object is more than 1m away
-        # depth_image = np.asanyarray(depth_frame.get_data())
-        # depth_image_3d = np.dstack((depth_image,depth_image,depth_image)) #depth image is 1 channel, color is 3 channels
-        # bg_removed = np.where((depth_image_3d > clipping_distance) | (depth_image_3d <= 0), black, color_image)
-        # cv2.imshow('2: BG Removed', bg_removed)
-
         # Removing background when there is no motion
         fg_mask = backSub.apply(color_image)
-        # Filter foreground: Noise removal
+        # Filter foreground: Noise removal (not needed)
         #ret,fg_mask = cv2.threshold(fg_mask,127,255,cv2.THRESH_BINARY) #black & white
         #fg_mask = cv2.medianBlur(fg_mask,5) #removes shadow
-        cv2.imshow("2: BG Sub", fg_mask)
+        cv2.imshow("Background", fg_mask)
 
         contours, hierarchy = cv2.findContours(fg_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:] #can try CHAIN_APPROX_TC89_L1, CHAIN_APPROX_TC89_KCOS
         areas = [cv2.contourArea(c) for c in contours]
@@ -122,8 +113,7 @@ try:
             if inactivity_count == inactivity_max:
                 text = "Room is: Unoccupied"
 
-            # If "q" is pressed on the keyboard, 
-            # exit this loop
+            # If "q" is pressed on the keyboard, exit this loop
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -158,43 +148,20 @@ try:
         #text = "x: " + str(x2) + ", y: " + str(y2)
         #cv2.putText(frame, text, (x2 - 10, y2 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-#####################################################################
-
-        # x = int(depth_frame.get_width()/5) #
-        # y = int(depth_frame.get_height()/2)
-        #print(x, y)
-        #x_point = [x, x*2, x*3] if x is divided by 4
-
         dist = depth_frame.get_distance(x,y)
         #print(dist)
 
-
         # if more than 2m away, ignore
-        if dist > 2:
+        if dist > max_dist:
             cv2.imshow('Video',frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             continue
 
-        # For stability, getting mean of 3 frames
+        # For stability?, getting mean of 3 frames
         if count <= 3:
             dist_record += dist 
             count += 1
-
-        # # To get 20 points near the fixed point to find a mean (for stability?)
-        # for j in range(points):
-        #     dist_temp = depth_frame.get_distance(x+j, y)
-        #     if (dist_temp != 0) and (dist_temp < max_dist):
-        #         dist_record += dist_temp
-        #         count += 1
-        #     dist_temp = depth_frame.get_distance(x+j, y+j)
-        #     if (dist_temp != 0) and (dist_temp < max_dist):
-        #         dist_record += dist_temp
-        #         count += 1
-        #     dist_temp = depth_frame.get_distance(x, y+j)
-        #     if (dist_temp != 0) and (dist_temp < max_dist):
-        #         dist_record += dist_temp
-        #         count += 1
 
         else:
             mean = round (dist_record / count, 2)
@@ -206,10 +173,6 @@ try:
                 #print(record)
                 number = str(mean)
 
-        # if less than 20cm away
-        # if record[len(record)-1] < 0.1:
-
-
             prev = current 
             current = mean
             if current > prev:
@@ -218,33 +181,27 @@ try:
                 record.append("down")
             print(mean)
             print(record)
-
-            #todo: make a function for this (if if if)
             
             if (len(record) > 3):
-                # for i in range (3):
-                #     p.append(record[len(record)-(i+1)])
 
-                if (current < endpoint): #endpoint = 0.4
-                    if (record.count("down") > 3):
-                        #print("in")
-                        text = "Room is: Occupied"
-                        record.clear()
-                        # p.clear()
-                        record.append("occu")
-                        change = True
+                if (current < endpoint) and (record.count("down") > 3):
+                    text = "Room is: Occupied"
+                    record.clear()
+                    record.append("occu")
+                    change = True
 
-                if (current > startpoint): #startpoint = 0.5
-                    if (record[0] == "occu") and (record.count("up") > 2):
-                        #print ("out")
-                        text = "Room is: Unoccupied"
-                        record.clear()
-                        # p.clear()
-                        change = True
-
-                if (len(record) > 7):
+                if (current > startpoint) and (record[0] == "occu") and (record.count("up") > 2):
+                    text = "Room is: Unoccupied"
+                    record.clear()
+                    change = True
+                
+            if (len(record) > 7):
+                if record[0] == "occu":
                     del record[1]
-        
+                else:
+                    del record[0]
+
+
         if change:
             print("\nTHERE IS A CHANGE ---->", text)
 
